@@ -14,7 +14,7 @@ jobs:
         platform: [2]
 
     steps:
-      # 1. Cleanup workspace
+      # 1. Clean workspace
       - name: Clean workspace
         run: |
           echo "Before cleanup:"
@@ -24,7 +24,7 @@ jobs:
           echo "After cleanup:"
           ls -lah ./
 
-      # 2. Checkout repo
+      # 2. Checkout repo + submodules
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -37,7 +37,7 @@ jobs:
           brew install --cask zulu@8
           export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
 
-      # 4. Patch files
+      # 4. Apply patch
       - name: Apply patch
         run: |
           gpatch ./Amethyst-iOS/Natives/MinecraftResourceDownloadTask.m MinecraftResourceDownloadTask.patch
@@ -48,43 +48,41 @@ jobs:
           cd Amethyst-iOS
           export PATH=/opt/homebrew/bin:$PATH
           export SLIMMED=1
-          if [ "${{ matrix.platform_name }}" == "ios" ]; then
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BRANCH=main VERBOSE=1
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BRANCH=main VERBOSE=1
-          elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BRANCH=main VERBOSE=1
-          else
-            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BRANCH=main VERBOSE=1
-          fi
+          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BRANCH=main VERBOSE=1
+          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BRANCH=main VERBOSE=1
 
-      # 6. Upload artifacts
+      # 6. Upload regular IPA
       - name: Upload regular IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}.ipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.ipa
 
+      # 7. Upload regular TIPA
       - name: Upload regular TIPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
 
+      # 8. Upload slimmed IPA
       - name: Upload slimmed IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}.ipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.ipa
 
+      # 9. Upload slimmed TIPA
       - name: Upload slimmed TIPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
 
-      - name: Upload dSYM (iOS only)
+      # 10. Upload dSYM (iOS only)
+      - name: Upload dSYM
         if: matrix.platform_name == 'ios'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: AngelAuraAmethyst.dSYM
           path: Amethyst-iOS/artifacts/AngelAuraAmethyst.dSYM
