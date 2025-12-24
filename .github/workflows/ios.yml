@@ -72,6 +72,13 @@ jobs:
           path: 'Amethyst-iOS/gl4es'
 
       # --------------------------
+      # Patch gl4es for modern CMake
+      # --------------------------
+      - name: Patch gl4es CMakeLists for CMake >= 3.5
+        run: |
+          sed -i '' 's/cmake_minimum_required(VERSION [0-9]\+\.[0-9]\+)/cmake_minimum_required(VERSION 3.5)/' Amethyst-iOS/gl4es/CMakeLists.txt
+
+      # --------------------------
       # Build gl4es
       # --------------------------
       - name: Build gl4es
@@ -82,7 +89,8 @@ jobs:
           wget https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
           cmake -B build -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake -DDEFAULT_ES=2 \
             -DNOX11=ON -DNOEGL=OFF -DSTATICLIB=OFF -DPLATFORM=OS64 \
-            -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
+            -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
           cmake --build build --config RelWithDebInfo --target GL
           cp -R lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
 
