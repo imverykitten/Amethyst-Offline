@@ -1,156 +1,90 @@
 name: iOS CI
 
-on: [push, workflow_dispatch]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
-    name: iOS CI
+    name: Build iOS
+    runs-on: macos-14
     strategy:
       matrix:
-        include:
-          - platform: 2
-            platform_name: ios
-
-    runs-on: macos-14
+        platform_name: [ios]  # add tvos if needed
+        platform: [2]
 
     steps:
-      # --------------------------
-      # Clean workspace
-      # --------------------------
-      - name: Remove work folders
+      # 1. Cleanup workspace
+      - name: Clean workspace
         run: |
-          echo "before"
+          echo "Before cleanup:"
           ls -lah ./
           rm -rf ./* || true
           rm -rf ./.??* || true
-          echo "after"
+          echo "After cleanup:"
           ls -lah ./
 
-      # --------------------------
-      # Checkout repository
-      # --------------------------
+      # 2. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
-      - name: Checkout submodules
-        run: git submodule update --init --recursive
-
-      # --------------------------
-      # Install dependencies
-      # --------------------------
+      # 3. Install dependencies
       - name: Install dependencies
         run: |
-          brew install gpatch make ldid cmake wget
+          brew install gpatch make ldid
           brew install --cask zulu@8
           export JAVA_HOME=$(/usr/libexec/java_home -v 1.8)
-          export PATH=/opt/homebrew/bin:$PATH:$JAVA_HOME/bin
 
-      # --------------------------
-      # Debug: list iOS source
-      # --------------------------
-      - name: List iOS source files
+      # 4. Patch files
+      - name: Apply patch
         run: |
-          echo "Listing Amethyst-iOS source:"
-          find ./Amethyst-iOS -name "*.m" -o -name "*.swift"
+          gpatch ./Amethyst-iOS/Natives/MinecraftResourceDownloadTask.m MinecraftResourceDownloadTask.patch
 
-      # --------------------------
-      # Apply patches
-      # --------------------------
-      - name: Patch files
-        run: |
-          gpatch ./Amethyst-iOS/Natives/MinecraftResourceDownloadTask.m MinecraftResourceDownloadTask.patch || true
-          gpatch ./Amethyst-iOS/Natives/Tools.m Tools.patch || true
-          gpatch ./Amethyst-iOS/Natives/MinecraftDownloader.m MinecraftDownloader.patch || true
-
-      # --------------------------
-      # Patch JavaLauncher.m for Mach APIs
-      # --------------------------
-      - name: Patch JavaLauncher for Mach headers
-        run: |
-          sed -i '' '1i\
-#import <mach/mach.h>
-' Amethyst-iOS/Natives/JavaLauncher.m
-
-      # --------------------------
-      # Checkout gl4es
-      # --------------------------
-      - name: Get gl4es
-        uses: actions/checkout@v3
-        with:
-          repository: 'PojavLauncherTeam/gl4es-114-extra'
-          path: 'Amethyst-iOS/gl4es'
-
-      # --------------------------
-      # Build gl4es
-      # --------------------------
-      - name: Build gl4es
-        run: |
-          cd Amethyst-iOS/gl4es
-          git config user.email "github-actions@users.noreply.github.com"
-          git config user.name "github-actions"
-          wget https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
-          cmake -B build -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake -DDEFAULT_ES=2 \
-            -DNOX11=ON -DNOEGL=OFF -DSTATICLIB=OFF -DPLATFORM=OS64 \
-            -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
-          cmake --build build --config RelWithDebInfo --target GL
-          cp -R lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
-
-      # --------------------------
-      # Debug: list frameworks
-      # --------------------------
-      - name: List Frameworks
-        run: ls -lah Amethyst-iOS/Natives/resources/Frameworks
-
-      # --------------------------
-      # Build iOS app
-      # --------------------------
+      # 5. Build
       - name: Build for ${{ matrix.platform_name }}
         run: |
           cd Amethyst-iOS
           export PATH=/opt/homebrew/bin:$PATH
           export SLIMMED=1
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BRANCH=main VERBOSE=1
-          gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BRANCH=main VERBOSE=1
+          if [ "${{ matrix.platform_name }}" == "ios" ]; then
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BRANCH=main VERBOSE=1
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BRANCH=main VERBOSE=1
+          elif [ "${{ matrix.platform_name }}" == "tvos" ]; then
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} TROLLSTORE_JIT_ENT=1 BRANCH=main VERBOSE=1
+          else
+            gmake -j$(sysctl -n hw.ncpu) dsym package PLATFORM=${{ matrix.platform }} BRANCH=main VERBOSE=1
+          fi
 
-      # --------------------------
-      # Upload IPA / TIPAs
-      # --------------------------
-      - name: Upload regular ipa
-        uses: actions/upload-artifact@v4
+      # 6. Upload artifacts
+      - name: Upload regular IPA
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}.ipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.ipa
 
-      - name: Upload regular tipa
-        uses: actions/upload-artifact@v4
+      - name: Upload regular TIPA
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
 
-      - name: Upload slimmed ipa
-        uses: actions/upload-artifact@v4
+      - name: Upload slimmed IPA
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}.ipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.ipa
 
-      - name: Upload slimmed tipa
-        uses: actions/upload-artifact@v4
+      - name: Upload slimmed TIPA
+        uses: actions/upload-artifact@v3
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
 
-      - name: Upload PojavLauncher.dSYM
+      - name: Upload dSYM (iOS only)
         if: matrix.platform_name == 'ios'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: AngelAuraAmethyst.dSYM
           path: Amethyst-iOS/artifacts/AngelAuraAmethyst.dSYM
-
-      # --------------------------
-      # Upload patch rejects for debugging
-      # --------------------------
-      - name: Upload patch rejects
-        uses: actions/upload-artifact@v4
-        with:
-          name: patch-rejects
-          path: ./Amethyst-iOS/Natives/*.rej
