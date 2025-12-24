@@ -50,21 +50,29 @@ jobs:
       # --------------------------
       - name: List iOS source files
         run: |
-          echo "Listing possible iOS source folders..."
-          find . -name "*.m" -o -name "*.swift"
+          echo "Listing Amethyst-iOS source:"
+          find ./Amethyst-iOS -name "*.m" -o -name "*.swift"
 
       # --------------------------
-      # Patch files
+      # Apply patches
       # --------------------------
-      - name: Apply patches
+      - name: Patch files
         run: |
-          # Replace <iOS-source-folder> with actual folder containing .m files
-          gpatch ./iOSSource/MinecraftResourceDownloadTask.m MinecraftResourceDownloadTask.patch || true
-          gpatch ./iOSSource/Tools.m Tools.patch || true
-          gpatch ./iOSSource/MinecraftDownloader.m MinecraftDownloader.patch || true
+          gpatch ./Amethyst-iOS/Natives/MinecraftResourceDownloadTask.m MinecraftResourceDownloadTask.patch || true
+          gpatch ./Amethyst-iOS/Natives/Tools.m Tools.patch || true
+          gpatch ./Amethyst-iOS/Natives/MinecraftDownloader.m MinecraftDownloader.patch || true
 
       # --------------------------
-      # Optional: Build gl4es
+      # Checkout gl4es
+      # --------------------------
+      - name: Get gl4es
+        uses: actions/checkout@v3
+        with:
+          repository: 'PojavLauncherTeam/gl4es-114-extra'
+          path: 'Amethyst-iOS/gl4es'
+
+      # --------------------------
+      # Build gl4es
       # --------------------------
       - name: Build gl4es
         run: |
@@ -79,13 +87,13 @@ jobs:
           cp -R lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
 
       # --------------------------
-      # Debug: list Frameworks
+      # Debug: list frameworks
       # --------------------------
       - name: List Frameworks
         run: ls -lah Amethyst-iOS/Natives/resources/Frameworks
 
       # --------------------------
-      # Build iOS
+      # Build iOS app
       # --------------------------
       - name: Build for ${{ matrix.platform_name }}
         run: |
@@ -136,4 +144,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: patch-rejects
-          path: ./iOSSource/*.rej
+          path: ./Amethyst-iOS/Natives/*.rej
