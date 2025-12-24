@@ -32,7 +32,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Checkout repository submodules
+      - name: Checkout submodules
         run: git submodule update --init --recursive
 
       # --------------------------
@@ -63,6 +63,15 @@ jobs:
           gpatch ./Amethyst-iOS/Natives/MinecraftDownloader.m MinecraftDownloader.patch || true
 
       # --------------------------
+      # Patch JavaLauncher.m for Mach APIs
+      # --------------------------
+      - name: Patch JavaLauncher for Mach headers
+        run: |
+          sed -i '' '1i\
+#import <mach/mach.h>
+' Amethyst-iOS/Natives/JavaLauncher.m
+
+      # --------------------------
       # Checkout gl4es
       # --------------------------
       - name: Get gl4es
@@ -70,13 +79,6 @@ jobs:
         with:
           repository: 'PojavLauncherTeam/gl4es-114-extra'
           path: 'Amethyst-iOS/gl4es'
-
-      # --------------------------
-      # Patch gl4es for modern CMake
-      # --------------------------
-      - name: Patch gl4es CMakeLists for CMake >= 3.5
-        run: |
-          sed -i '' 's/cmake_minimum_required(VERSION [0-9]\+\.[0-9]\+)/cmake_minimum_required(VERSION 3.5)/' Amethyst-iOS/gl4es/CMakeLists.txt
 
       # --------------------------
       # Build gl4es
@@ -89,8 +91,7 @@ jobs:
           wget https://github.com/leetal/ios-cmake/raw/master/ios.toolchain.cmake
           cmake -B build -DCMAKE_TOOLCHAIN_FILE=ios.toolchain.cmake -DDEFAULT_ES=2 \
             -DNOX11=ON -DNOEGL=OFF -DSTATICLIB=OFF -DPLATFORM=OS64 \
-            -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration \
-            -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+            -DCMAKE_C_FLAGS=-Wno-error=implicit-function-declaration
           cmake --build build --config RelWithDebInfo --target GL
           cp -R lib/libGL.dylib ../Natives/resources/Frameworks/libgl4es_114.dylib
 
