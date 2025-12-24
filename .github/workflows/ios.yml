@@ -53,28 +53,28 @@ jobs:
 
       # 6. Upload regular IPA
       - name: Upload regular IPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}.ipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}.ipa
 
       # 7. Upload regular TIPA
       - name: Upload regular TIPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst-${{ matrix.platform_name }}-trollstore.tipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst-*-${{ matrix.platform_name }}-trollstore.tipa
 
       # 8. Upload slimmed IPA
       - name: Upload slimmed IPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}.ipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}.ipa
 
       # 9. Upload slimmed TIPA
       - name: Upload slimmed TIPA
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: org.angelauramc.amethyst.slimmed-${{ matrix.platform_name }}-trollstore.tipa
           path: Amethyst-iOS/artifacts/org.angelauramc.amethyst.slimmed-*-${{ matrix.platform_name }}-trollstore.tipa
@@ -82,7 +82,7 @@ jobs:
       # 10. Upload dSYM (iOS only)
       - name: Upload dSYM
         if: matrix.platform_name == 'ios'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: AngelAuraAmethyst.dSYM
           path: Amethyst-iOS/artifacts/AngelAuraAmethyst.dSYM
